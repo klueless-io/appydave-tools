@@ -40,7 +40,9 @@ module Appydave
               trigram_match(transaction, 0.7, '70%') ||
               trigram_match(transaction, 0.6, '60%') ||
               trigram_match(transaction, 0.5, '50%') ||
-              transaction
+              start_with_match(transaction) ||
+              includes(transaction)
+            transaction
           end
 
           def map_bank_account(transaction)
@@ -56,12 +58,36 @@ module Appydave
 
           def equality_match(transaction)
             coa = config.bank_reconciliation.chart_of_accounts.find do |chart_of_account|
-              chart_of_account.narration.to_s.delete(' ') == transaction.narration.delete(' ')
+              chart_of_account.narration.to_s.delete(' ').downcase == transaction.narration.delete(' ').downcase
             end
 
             return nil unless coa
 
             transaction.coa_match_type = 'equality'
+            transaction.coa_code = coa.code
+            transaction
+          end
+
+          def start_with_match(transaction)
+            coa = config.bank_reconciliation.chart_of_accounts.find do |chart_of_account|
+              transaction.narration.to_s.delete(' ').downcase.start_with?(chart_of_account.narration.to_s.downcase)
+            end
+
+            return nil unless coa
+
+            transaction.coa_match_type = 'starts_with'
+            transaction.coa_code = coa.code
+            transaction
+          end
+
+          def includes(transaction)
+            coa = config.bank_reconciliation.chart_of_accounts.find do |chart_of_account|
+              transaction.narration.to_s.delete(' ').downcase.include?(chart_of_account.narration.delete(' ').to_s.downcase)
+            end
+
+            return nil unless coa
+
+            transaction.coa_match_type = 'includes'
             transaction.coa_code = coa.code
             transaction
           end

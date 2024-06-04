@@ -48,6 +48,42 @@ module Appydave
             @coa_match_type = coa_match_type
             @account_name = account_name
           end
+
+          def self.csv_headers
+            %i[
+              bsb_number
+              account_number
+              transaction_date
+              narration
+              cheque_number
+              debit
+              credit
+              balance
+              transaction_type
+              platform
+              coa_code
+              coa_match_type
+              account_name
+            ]
+          end
+
+          def to_csv_row
+            [
+              @bsb_number,
+              @account_number,
+              @transaction_date,
+              @narration,
+              @cheque_number,
+              @debit,
+              @credit,
+              @balance,
+              @transaction_type,
+              @platform,
+              @coa_code,
+              @coa_match_type,
+              @account_name
+            ]
+          end
         end
       end
     end

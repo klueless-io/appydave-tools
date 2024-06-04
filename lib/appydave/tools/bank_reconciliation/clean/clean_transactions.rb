@@ -10,24 +10,31 @@ module Appydave
           include KLog::Logging
 
           attr_reader :transaction_folder
+          attr_reader :output_folder
           attr_reader :transactions
 
           # (config_file)
-          def initialize(transaction_folder: '/Volumes/Expansion/Sync/bank-reconciliation/original-transactions')
+          def initialize(transaction_folder: nil, output_folder: nil)
+            # needs to use config.bank_reconciliation.transaction_folder
+            transaction_folder ||= '/Volumes/Expansion/Sync/bank-reconciliation/original-transactions'
+            output_folder ||= File.join(transaction_folder, 'clean')
+
             @transaction_folder = transaction_folder
+            @output_folder = output_folder
           end
 
-          def clean_transactions(input_globs, _output_file)
+          def clean_transactions(input_globs, output_file)
             raw_transactions = grab_raw_transactions(input_globs)
             transactions, duplicates_count = deduplicate(raw_transactions)
 
             transactions = Mapper.new.map(transactions)
-            # tp transactions
+
+            # tp transactions, Appydave::Tools::BankReconciliation::Models::Transaction.csv_headers
 
             log.kv 'Deduped consolidated transactions', duplicates_count if duplicates_count.positive?
 
-            # transactions = normalize(transactions)
-            # save_to_csv(transactions, output_file)
+            save_to_csv(transactions, output_file)
+
             @transactions = transactions
           end
 
@@ -42,6 +49,7 @@ module Appydave
 
               input_globs.each do |glob|
                 Dir.glob(glob).each do |file|
+                  log.kv 'Reading transactions from', file
                   raw_transactions = ReadTransactions.new(file).read
                   deduped_transactions, duplicates_count = deduplicate(raw_transactions)
 
@@ -81,8 +89,11 @@ module Appydave
           end
 
           def save_to_csv(transactions, output_file)
+            FileUtils.mkdir_p(output_folder)
+            output_file = File.join(output_folder, output_file)
+
             CSV.open(output_file, 'w') do |csv|
-              csv << ReconciledTransaction.csv_headers
+              csv << Appydave::Tools::BankReconciliation::Models::Transaction.csv_headers
               transactions.each do |transaction|
                 csv << transaction.to_csv_row
               end

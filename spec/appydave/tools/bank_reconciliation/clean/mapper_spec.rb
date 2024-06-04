@@ -23,7 +23,10 @@ RSpec.describe Appydave::Tools::BankReconciliation::Clean::Mapper do
       chart_of_accounts: [
         { 'code' => 'internal_transfer', 'narration' => 'Capital Transfer' },
         { 'code' => 'commbank', 'narration' => 'Capital Transfer to Commonwealth Bank' },
-        { 'code' => 'wise', 'narration' => 'Capital Transfer Wise' }
+        { 'code' => 'wise', 'narration' => 'Capital Transfer Wise' },
+        { 'code' => 'internal_transfer', 'narration' => 'PayWise' },
+        { code: 'PSYCHOLOGY', narration: 'MARIANNE GABRIEL' },
+        { code: 'FRIEND', narration: 'Nick Jones' }
       ],
       bank_accounts: [
         { 'account_number' => configured_account_number, 'bsb' => '303-111', 'name' => 'Test Account', 'platform' => 'Test Bank' }
@@ -100,6 +103,24 @@ RSpec.describe Appydave::Tools::BankReconciliation::Clean::Mapper do
         let(:narration) { 'Capital Transfer Commonweal' }
 
         it { is_expected.to have_attributes(coa_code: 'commbank', coa_match_type: '60%') }
+      end
+
+      context 'when Case Insensitive Match' do
+        let(:narration) { 'MARIANNEGABRIEL' }
+
+        it { is_expected.to have_attributes(coa_code: 'PSYCHOLOGY', coa_match_type: 'equality') }
+      end
+
+      context 'when starts with' do
+        let(:narration) { 'Pay Wise Account' }
+
+        it { is_expected.to have_attributes(coa_code: 'internal_transfer', coa_match_type: 'starts_with') }
+      end
+
+      context 'when includes' do
+        let(:narration) { 'To Nick Jones 06:33AM 16Jul NicholasJones' }
+
+        it { is_expected.to have_attributes(coa_code: 'FRIEND', coa_match_type: 'includes') }
       end
     end
   end
