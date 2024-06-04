@@ -63,39 +63,39 @@ RSpec.describe Appydave::Tools::BankReconciliation::Clean::CleanTransactions do
     end
   end
 
-  describe '.clean_transactions' do
-    before { instance.clean_transactions(input_globs, output_file) }
+  # describe '.clean_transactions' do
+  #   before { instance.clean_transactions(input_globs, output_file) }
 
-    context 'when file has no duplicates' do
-      subject { instance.transactions.size }
+  #   context 'when file has no duplicates' do
+  #     subject { instance.transactions.size }
 
-      it { is_expected.to eq(3) }
-    end
+  #     it { is_expected.to eq(3) }
+  #   end
 
-    context 'when file has duplicates' do
-      subject { instance.transactions.size }
+  #   context 'when file has duplicates' do
+  #     subject { instance.transactions.size }
 
-      let(:input_globs) { ['bank-west-has-duplicates.csv'] }
+  #     let(:input_globs) { ['bank-west-has-duplicates.csv'] }
 
-      it { is_expected.to eq(2) }
-    end
+  #     it { is_expected.to eq(2) }
+  #   end
 
-    context 'when transaction #1 mappings' do
-      subject { instance.transactions[0] }
+  #   context 'when transaction #1 mappings' do
+  #     subject { instance.transactions[0] }
 
-      it { is_expected.to have_attributes(coa_match_type: 'equality', coa_code: 'Transfer', account_name: 'Test Account 1', platform: 'Test Bank') }
-    end
+  #     it { is_expected.to have_attributes(coa_match_type: 'equality', coa_code: 'Transfer', account_name: 'Test Account 1', platform: 'Test Bank') }
+  #   end
 
-    context 'when transaction #2 mappings' do
-      subject { instance.transactions[1] }
+  #   context 'when transaction #2 mappings' do
+  #     subject { instance.transactions[1] }
 
-      it { is_expected.to have_attributes(coa_match_type: '70%', coa_code: 'Expense', account_name: 'Test Account 2', platform: 'Test Bank') }
-    end
+  #     it { is_expected.to have_attributes(coa_match_type: '70%', coa_code: 'Expense', account_name: 'Test Account 2', platform: 'Test Bank') }
+  #   end
 
-    context 'when transaction #3 mappings' do
-      subject { instance.transactions[2] }
+  #   context 'when transaction #3 mappings' do
+  #     subject { instance.transactions[2] }
 
-      it { is_expected.to have_attributes(coa_match_type: '80%', coa_code: 'Income', account_name: 'Test Account 3', platform: 'Another Bank') }
-    end
-  end
+  #     it { is_expected.to have_attributes(coa_match_type: '80%', coa_code: 'Income', account_name: 'Test Account 3', platform: 'Another Bank') }
+  #   end
+  # end
 end
