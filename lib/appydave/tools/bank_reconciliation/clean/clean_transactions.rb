@@ -6,15 +6,17 @@ module Appydave
       module Clean
         # Clean transactions
         class CleanTransactions
-          include Appydave::Tools::Configuration::Configurable
           include KLog::Logging
+          include Appydave::Tools::Configuration::Configurable
+          include Appydave::Tools::Debuggable
 
           attr_reader :transaction_folder
           attr_reader :output_folder
           attr_reader :transactions
 
           # (config_file)
-          def initialize(transaction_folder: nil, output_folder: nil)
+          def initialize(transaction_folder: nil, output_folder: nil, debug: false)
+            @debug = debug
             # needs to use config.bank_reconciliation.transaction_folder
             transaction_folder ||= '/Volumes/Expansion/Sync/bank-reconciliation/original-transactions'
             output_folder ||= File.join(transaction_folder, 'clean')
@@ -24,16 +26,21 @@ module Appydave
           end
 
           def clean_transactions(input_globs, output_file)
+            log_info("Starting transaction cleaning with input patterns: #{input_globs}")
+
             raw_transactions = grab_raw_transactions(input_globs)
-            transactions, duplicates_count = deduplicate(raw_transactions)
+            log_info("Total raw transactions collected: #{raw_transactions.size}")
+
+            transactions, duplicates_count = deduplicate_across_files(raw_transactions)
+            log_info("Duplicates found and removed: #{duplicates_count}")
 
             transactions = Mapper.new.map(transactions)
+            log_info('Transactions mapped to chart of accounts and bank accounts')
 
-            # tp transactions, Appydave::Tools::BankReconciliation::Models::Transaction.csv_headers
-
-            log.kv 'Deduped consolidated transactions', duplicates_count if duplicates_count.positive?
+            log_kv 'Deduped consolidated transactions', duplicates_count if duplicates_count.positive?
 
             save_to_csv(transactions, output_file)
+            log_kv('Transaction Output File', full_output_file(output_file))
 
             @transactions = transactions
           end
@@ -49,13 +56,13 @@ module Appydave
 
               input_globs.each do |glob|
                 Dir.glob(glob).each do |file|
-                  log.kv 'Reading transactions from', file
+                  log_kv 'Reading transactions from', file
                   raw_transactions = ReadTransactions.new(file).read
-                  deduped_transactions, duplicates_count = deduplicate(raw_transactions)
+                  deduped_transactions, duplicates_count = deduplicate_within_file(raw_transactions)
 
                   if duplicates_count.positive?
-                    log.kv 'Duplicates count', duplicates_count
-                    log.kv 'File', file
+                    log_kv 'Duplicates count within file', duplicates_count
+                    log_kv 'File', file
                   end
 
                   transactions += deduped_transactions
@@ -68,7 +75,7 @@ module Appydave
             transactions
           end
 
-          def deduplicate(transactions)
+          def deduplicate_within_file(transactions)
             unique_transactions = transactions.uniq do |transaction|
               [
                 transaction.bsb_number,
@@ -88,9 +95,41 @@ module Appydave
             [unique_transactions, duplicates]
           end
 
+          def deduplicate_across_files(transactions)
+            grouped_transactions = transactions.group_by do |transaction|
+              [
+                transaction.bsb_number,
+                transaction.account_number,
+                transaction.transaction_date,
+                transaction.narration,
+                transaction.cheque_number,
+                transaction.debit,
+                transaction.credit,
+                transaction.balance,
+                transaction.transaction_type
+              ]
+            end
+
+            unique_transactions = []
+            duplicates_count = 0
+
+            grouped_transactions.each_value do |dupes|
+              unique_transaction = dupes.first
+              unique_transaction.source_files = dupes.flat_map(&:source_files).uniq
+              duplicates_count += dupes.size - 1
+              unique_transactions << unique_transaction
+            end
+
+            [unique_transactions, duplicates_count]
+          end
+
+          def full_output_file(output_file)
+            File.join(output_folder, output_file)
+          end
+
           def save_to_csv(transactions, output_file)
             FileUtils.mkdir_p(output_folder)
-            output_file = File.join(output_folder, output_file)
+            output_file = full_output_file(output_file)
 
             CSV.open(output_file, 'w') do |csv|
               csv << Appydave::Tools::BankReconciliation::Models::Transaction.csv_headers

@@ -29,7 +29,8 @@ RSpec.describe Appydave::Tools::BankReconciliation::Clean::ReadTransactions do
           debit: '-50.00',
           credit: nil,
           balance: '0.50',
-          transaction_type: 'TFD'
+          transaction_type: 'TFD',
+          source_files: [file_path]
         )
       end
     end

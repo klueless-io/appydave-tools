@@ -9,7 +9,8 @@ RSpec.describe Appydave::Tools::BankReconciliation::Clean::CleanTransactions do
   let(:transaction_folder) { 'spec/fixtures/bank-reconciliation' }
   let(:input_globs) { ['bank-west.csv'] }
   let(:temp_folder) { Dir.mktmpdir }
-  let(:output_file) { File.join(temp_folder, 'output.csv') }
+  let(:output_folder) { temp_folder }
+  let(:output_file) { 'output.csv' }
   let(:config_file) { File.join(temp_folder, 'bank-reconciliation.json') }
   let(:config_data) do
     {
@@ -39,63 +40,110 @@ RSpec.describe Appydave::Tools::BankReconciliation::Clean::CleanTransactions do
     FileUtils.remove_entry(temp_folder)
   end
 
-  context 'when grabing transactions from file' do
-    it 'reads transaction from file' do
+  context 'when grabbing transactions from file' do
+    it 'reads transactions from file' do
       raw_transactions = instance.send(:grab_raw_transactions, input_globs)
       expect(raw_transactions.size).to eq(3)
     end
   end
 
   context 'when duplicate transactions in single file' do
-    it 'duplicates and reports duplicate count' do
+    it 'removes duplicates and reports duplicate count' do
       sample_transactions = (1..4).map do
-        Appydave::Tools::BankReconciliation::Models::Transaction.new(
+        transaction = Appydave::Tools::BankReconciliation::Models::Transaction.new(
           bsb_number: '303-111',
           account_number: '1234567',
-          transaction_date: '12/12/2023'
+          transaction_date: '12/12/2023',
+          narration: 'Sample Narration',
+          cheque_number: '',
+          debit: '50.00',
+          credit: '',
+          balance: '100.00',
+          transaction_type: 'TFD'
         )
+        transaction.add_source_file('file.csv')
+        transaction
       end
 
-      transactions, duplicate_count = instance.send(:deduplicate, sample_transactions)
+      transactions, duplicate_count = instance.send(:deduplicate_within_file, sample_transactions)
 
       expect(transactions.size).to eq(1)
       expect(duplicate_count).to eq(3)
     end
   end
 
-  # describe '.clean_transactions' do
-  #   before { instance.clean_transactions(input_globs, output_file) }
+  context 'when deduplicating transactions across multiple files' do
+    let(:transactions) do
+      t1 = Appydave::Tools::BankReconciliation::Models::Transaction.new(
+        bsb_number: '303-111',
+        account_number: '1234567',
+        transaction_date: '12/12/2023',
+        narration: 'Sample Narration',
+        cheque_number: '',
+        debit: '50.00',
+        credit: '',
+        balance: '100.00',
+        transaction_type: 'TFD'
+      )
+      t1.add_source_file('file1.csv')
+      t2 = Appydave::Tools::BankReconciliation::Models::Transaction.new(
+        bsb_number: '303-111',
+        account_number: '1234567',
+        transaction_date: '12/12/2023',
+        narration: 'Sample Narration',
+        cheque_number: '',
+        debit: '50.00',
+        credit: '',
+        balance: '100.00',
+        transaction_type: 'TFD'
+      )
+      t2.add_source_file('file2.csv')
 
-  #   context 'when file has no duplicates' do
-  #     subject { instance.transactions.size }
+      [t1, t2]
+    end
 
-  #     it { is_expected.to eq(3) }
-  #   end
+    it 'merges source files for duplicates and reports duplicate count' do
+      unique_transactions, duplicates_count = instance.send(:deduplicate_across_files, transactions)
 
-  #   context 'when file has duplicates' do
-  #     subject { instance.transactions.size }
+      expect(unique_transactions.size).to eq(1)
+      expect(duplicates_count).to eq(1)
+      expect(unique_transactions.first.source_files).to contain_exactly('file1.csv', 'file2.csv')
+    end
+  end
 
-  #     let(:input_globs) { ['bank-west-has-duplicates.csv'] }
+  describe '.clean_transactions' do
+    before { instance.clean_transactions(input_globs, output_file) }
 
-  #     it { is_expected.to eq(2) }
-  #   end
+    context 'when file has no duplicates' do
+      subject { instance.transactions.size }
 
-  #   context 'when transaction #1 mappings' do
-  #     subject { instance.transactions[0] }
+      it { is_expected.to eq(3) }
+    end
 
-  #     it { is_expected.to have_attributes(coa_match_type: 'equality', coa_code: 'Transfer', account_name: 'Test Account 1', platform: 'Test Bank') }
-  #   end
+    context 'when file has duplicates' do
+      subject { instance.transactions.size }
 
-  #   context 'when transaction #2 mappings' do
-  #     subject { instance.transactions[1] }
+      let(:input_globs) { ['bank-west-has-duplicates.csv'] }
 
-  #     it { is_expected.to have_attributes(coa_match_type: '70%', coa_code: 'Expense', account_name: 'Test Account 2', platform: 'Test Bank') }
-  #   end
+      it { is_expected.to eq(2) }
+    end
 
-  #   context 'when transaction #3 mappings' do
-  #     subject { instance.transactions[2] }
+    context 'when transaction #1 mappings' do
+      subject { instance.transactions[0] }
 
-  #     it { is_expected.to have_attributes(coa_match_type: '80%', coa_code: 'Income', account_name: 'Test Account 3', platform: 'Another Bank') }
-  #   end
-  # end
+      it { is_expected.to have_attributes(coa_match_type: 'equality', coa_code: 'Transfer', account_name: 'Test Account 1', platform: 'Test Bank') }
+    end
+
+    context 'when transaction #2 mappings' do
+      subject { instance.transactions[1] }
+
+      it { is_expected.to have_attributes(coa_match_type: '70%', coa_code: 'Expense', account_name: 'Test Account 2', platform: 'Test Bank') }
+    end
+
+    context 'when transaction #3 mappings' do
+      subject { instance.transactions[2] }
+
+      it { is_expected.to have_attributes(coa_match_type: '80%', coa_code: 'Income', account_name: 'Test Account 3', platform: 'Another Bank') }
+    end
+  end
 end

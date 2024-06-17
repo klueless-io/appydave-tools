@@ -18,7 +18,8 @@ module Appydave
                         :platform,
                         :coa_code,
                         :coa_match_type,
-                        :account_name
+                        :account_name,
+                        :source_files
 
           def initialize(bsb_number: nil,
                          account_number: nil,
@@ -47,41 +48,50 @@ module Appydave
             @coa_code = coa_code
             @coa_match_type = coa_match_type
             @account_name = account_name
+            @source_files = []
           end
+
+          def add_source_file(source_file)
+            @source_files << source_file.strip unless @source_files.include?(source_file.strip)
+          end
+
+          # cheque_number
 
           def self.csv_headers
             %i[
+              platform
+              account_name
               bsb_number
               account_number
               transaction_date
               narration
-              cheque_number
               debit
               credit
               balance
               transaction_type
-              platform
               coa_code
               coa_match_type
-              account_name
+              source_files
             ]
           end
 
+          # @cheque_number,
+
           def to_csv_row
             [
+              @platform,
+              @account_name,
               @bsb_number,
               @account_number,
               @transaction_date,
               @narration,
-              @cheque_number,
               @debit,
               @credit,
               @balance,
               @transaction_type,
-              @platform,
               @coa_code,
               @coa_match_type,
-              @account_name
+              @source_files
             ]
           end
         end

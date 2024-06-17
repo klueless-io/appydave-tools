@@ -44,6 +44,7 @@ module Appydave
                 balance: row['Balance'],
                 transaction_type: row['Transaction Type']
               )
+              transaction.add_source_file(@file)
               @transactions << transaction
             end
 
@@ -66,6 +67,7 @@ module Appydave
                 balance: row['Balance'],
                 transaction_type: row['Transaction Type']
               )
+              transaction.add_source_file(@file)
               @transactions << transaction
             end
 

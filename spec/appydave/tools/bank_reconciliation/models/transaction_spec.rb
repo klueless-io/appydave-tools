@@ -49,7 +49,8 @@ RSpec.describe Appydave::Tools::BankReconciliation::Models::Transaction do
         platform: nil,
         coa_code: nil,
         coa_match_type: nil,
-        account_name: nil
+        account_name: nil,
+        source_files: []
       )
     end
 
@@ -74,6 +75,19 @@ RSpec.describe Appydave::Tools::BankReconciliation::Models::Transaction do
         expect(subject.coa_code).to eq(coa_code)
         expect(subject.coa_match_type).to eq(coa_match_type)
         expect(subject.account_name).to eq(account_name)
+      end
+    end
+
+    context 'when source file is added' do
+      before do
+        instance.add_source_file('file1.csv')
+        instance.add_source_file('file2.csv')
+        instance.add_source_file('file1.csv')
+      end
+
+      it 'adds the source file' do
+        expect(subject.source_files.size).to eq(2)
+        expect(subject.source_files).to eq(['file1.csv', 'file2.csv'])
       end
     end
   end
@@ -111,7 +125,8 @@ RSpec.describe Appydave::Tools::BankReconciliation::Models::Transaction do
         platform: 'BankWest',
         coa_code: '1000',
         coa_match_type: 'fuzzy',
-        account_name: 'Main Account'
+        account_name: 'Main Account',
+        source_files: []
       )
     end
   end
