@@ -96,7 +96,6 @@ module Appydave
           end
 
           def trigram_match(transaction, score_threshold, match_type)
-            index = 0
             scored_transactions = config.bank_reconciliation.chart_of_accounts.map do |coa|
               {
                 coa: coa,
@@ -126,8 +125,8 @@ module Appydave
             same_cnt = (text1_trigs & text2_trigs).size
 
             same_cnt.to_f / all_cnt
-          # rescue StandardError => e
-          #   puts "Error comparing text: #{e.message}"
+            # rescue StandardError => e
+            #   puts "Error comparing text: #{e.message}"
           end
 
           def trigramify(text)
