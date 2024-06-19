@@ -40,7 +40,8 @@ module Appydave
             log_kv 'Deduped consolidated transactions', duplicates_count if duplicates_count.positive?
 
             save_to_csv(transactions, output_file)
-            log_kv('Transaction Output File', full_output_file(output_file))
+
+            csv_to_clipboard(output_file)
 
             @transactions = transactions
           end
@@ -137,6 +138,13 @@ module Appydave
                 csv << transaction.to_csv_row
               end
             end
+
+            log_kv('Transaction Output File', full_output_file(output_file))
+          end
+
+          def csv_to_clipboard(output_file)
+            IO.popen('pbcopy', 'w') { |f| f << File.read(full_output_file(output_file)) }
+            log_info('Transactions copied to clipboard')
           end
         end
       end

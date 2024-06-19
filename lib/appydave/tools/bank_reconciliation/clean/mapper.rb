@@ -23,6 +23,7 @@ module Appydave
           #   },
 
           def map(transactions)
+            # tp transactions, :coa_match_type, :coa_code, :narration, :debit, :credit
             transactions.map do |original_transaction|
               transaction = original_transaction.dup
 
@@ -51,6 +52,8 @@ module Appydave
             if bank_account
               transaction.account_name = bank_account.name
               transaction.platform = bank_account.platform
+            else
+              puts "Bank account not found for BSB#: #{transaction.bsb_number} | Account#: #{transaction.account_number}"
             end
 
             transaction
@@ -93,6 +96,7 @@ module Appydave
           end
 
           def trigram_match(transaction, score_threshold, match_type)
+            index = 0
             scored_transactions = config.bank_reconciliation.chart_of_accounts.map do |coa|
               {
                 coa: coa,
@@ -122,6 +126,8 @@ module Appydave
             same_cnt = (text1_trigs & text2_trigs).size
 
             same_cnt.to_f / all_cnt
+          # rescue StandardError => e
+          #   puts "Error comparing text: #{e.message}"
           end
 
           def trigramify(text)

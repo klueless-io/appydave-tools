@@ -56,9 +56,11 @@ module Appydave
 
             # Skip the header line and parse each subsequent line
             CSV.parse(csv_lines.join, headers: true).each do |row|
+              values = row['BSB / Account Number'].split(' - ')
+
               transaction = Models::Transaction.new(
-                bsb_number: row['BSB / Account Number'].split(' - ').first,
-                account_number: row['BSB / Account Number'].split(' - ').last,
+                bsb_number: values.length > 1 ? values.first : '',
+                account_number: values.length > 1 ? values.last : row['BSB / Account Number'],
                 transaction_date: row['Transaction Date'],
                 narration: row['Narration'],
                 cheque_number: row['Cheque Number'],
